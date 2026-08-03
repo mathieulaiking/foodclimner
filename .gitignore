@@ -28,15 +28,15 @@ tmp/
 
 # non needed for reproduction but
 # useful for dev (will be added in another branch)
-scripts/
-src/visualization
-docs/
+# scripts/
+# src/visualization
+# docs/
 
 # ai agents 
-AGENTS.md
-.codegraph
-.opencode
-.agents
-opencode.jsonc
-.codegraph/daemon.pid
-skills-lock.json
+# AGENTS.md
+# .codegraph
+# .opencode
+# .agents
+# opencode.jsonc
+# .codegraph/daemon.pid
+# skills-lock.json

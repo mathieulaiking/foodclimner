@@ -1,0 +1,197 @@
+\documentclass[11pt]{article}
+
+% Change "review" to "final" to generate the final (sometimes called camera-ready) version.
+% Change to "preprint" to generate a non-anonymous version with page numbers.
+\usepackage[review]{acl}
+
+% Standard package includes
+\usepackage{times}
+\usepackage{latexsym}
+
+% For proper rendering and hyphenation of words containing Latin characters (including in bib files)
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{inconsolata}
+\usepackage{graphicx}
+
+% If the title and author information does not fit in the area allocated, uncomment the following
+%\setlength\titlebox{<dim>}
+% and set <dim> to something 5cm or larger.
+
+% custom packages
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{tcolorbox}
+
+\title{A corpus for food practices related to climate change}
+
+\author{
+  \textbf{Mathieu Laï-king\textsuperscript{1,2}},
+  \textbf{Louise Deléger\textsuperscript{2}},
+  \textbf{Arnaud Ferré\textsuperscript{2}},
+  \textbf{Estelle Chaix\textsuperscript{1}},
+\\
+\\
+  \textsuperscript{1}DER, ANSES, Maisons-Alfort, France, \\
+  \textsuperscript{2}MaIAGE, INRAE, Université Paris-Saclay, Jouy‑en‑Josas, France,
+\\
+  \small{
+    \textbf{Correspondence:} \href{mailto:mathieu.laiking@anses.fr}{mathieu.laiking@anses.fr}
+  }
+}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+Climate change is reshaping food systems and consumer practices, creating new challenges for food safety. Understanding how people modify their eating habits in response to climate disruptions is critical for assessing emerging microbiological risks. We present FoodClimNER, a manually annotated corpus of 351 text segments extracted from 8 open-access scientific articles on food science in the context of climate change. The annotations cover 12 entity types: 7 food practice sub-categories (e.g., food repertoire, culinary preparation, waste management) and 5 climate-related categories (e.g., mitigations, problem origins, hazards). We benchmark three families of zero-shot NER methods: GLiNER (encoder-based), GoLLIE (decoder-based with annotation guidelines), and LLM prompting with structured prompts. Results show that expert-level entity definitions and the presence of close entity types make this a challenging testbed, with significant room for improvement. The corpus is publicly available for research to support NLP applications at the intersection of climate change and food safety.
+\end{abstract}
+
+\section{Introduction}
+
+Climate change is profoundly altering food systems, affecting production, transportation, storage, and food availability while also reshaping consumer behavior \cite{}. Consumers are adapting their eating habits (voluntarily through reduced meat consumption or a shift toward local and organic products, or involuntarily due to price increases and food shortages). These behavioral shifts may introduce or amplify microbiological hazards, as new practices emerge and foods with limited safety data enter diets. % TODO:  ajouter citation
+
+Consumer food practices are documented across diverse text sources (scientific literature, grey literature, press articles, and social media), making natural language processing methods a promising choice for extracting structured information from them. Being able to extract information on food practices linked to climate change could help in discovering and understanding emerging food practices that could pose a risk in the upcoming years, due to climate change. % TODO : exemple ? conso d'huitre + inondations ? et référence associée
+
+However, annotating sufficient training data for such tasks remains both time-consuming and costly.
+The rapid advances in large language models (LLMs) over recent years \cite{brownLanguageModelsAre2020,ouyangTrainingLanguageModels2022,touvronLLaMAOpenEfficient2023,guoDeepSeekR1IncentivizesReasoning2025} offer a compelling alternative: these models have demonstrated strong zero-shot capabilities through a variety of prompting strategies \cite{kojimaLargeLanguageModels2022a,weiChainofThoughtPromptingElicits2023}, which can naturally be extended to information extraction.
+
+We introduce \textbf{FoodClimNER}, a manually annotated corpus of <TODO> text segments extracted from <TODO> open-access scientific articles on food science and climate change. The annotation covers 12 entity types organized into two families: \textit{food practice} sub-categories (food repertoire, logistics and travel, supply and purchases, storage, culinary preparation, consumption and table manners, waste management) and \textit{climate-related} categories (climate change, greenhouse gases, hazards, mitigations, problem origins), with a bridging environmental concern type. 
+
+We evaluate three families of zero-shot NER approaches on the FoodClimNER corpus: GLiNER \cite{zaratianaGLiNERGeneralistModel2023}; GoLLIE \cite{sainzGoLLIEAnnotationGuidelines2024}, a decoder-based approach that formats annotation guidelines as Python class definitions; and structured LLM prompting with a persona, entity descriptions, rules, and output format specifications. Our results indicate that expert-level entity definitions and the fine granularity of types pose significant difficulties for current zero-shot methods, with ample room for improvement.
+
+Our contributions are threefold: (1) a new manually annotated NER corpus for food practices in the context of climate change, featuring nested and discontinuous entities; (2) a systematic comparison of encoder-based, decoder-based, and prompting-based zero-shot NER methods on this domain-specific task; and (3) an analysis of remaining challenges and directions for future work. 
+
+\section{Related Work}
+\paragraph{Zero-shot NER methods}
+Zero shot Named entity recognition task has gained more attention since the beginning of large language models. We have more general approaches that was adapted to different type of models but uses the same idea : defining an output schema to unify multiple information extraction tasks into one model by training it to produce this schema, this has been applied first with encoder-decoder models \cite{luUnifiedStructureGeneration2022,louUniversalInformationExtraction2023}, then decoder only models \cite{wangInstructUIEMultitaskInstruction2023} and also encoder-only models \cite{zaratianaGLiNER2SchemaDrivenMultiTask2025}.
+Then we have approaches distilling LLMs into smaller fine-tuned models, using LLMs as automatic annotators for large corpora of text using either only entity types names \cite{zaratianaGLiNERGeneralistModel2023, zhouUniversalNERTargetedDistillation2024} , or also their descriptions \cite{alyLeveragingTypeDescriptions2021, cocchieriZeroNERFuelingZeroShot2025} to then compute similarity metrics between sentence tokens and entity types (or types + description). Finally, we have other approaches leveraging the multiple emerging capacities of large language models
+
+ So zero-shot information extraction models have been developped for example exploiting schemas and prompting , using original way of defining annotation guidelines such as code \cite{sainzGoLLIEAnnotationGuidelines2024}, or using tool-calling methods \cite{xieEmpiricalStudyZeroShot2023}.
+
+\paragraph{Climate and Food domain NER corpora} 
+
+We also see multiple work in the food domain. Concerning the datasets, they usually are recipes datasets with food entities \cite{}
+
+\section{FoodClimNER : A new corpus for food practices related to climate change}
+
+We want to provide a new corpus of food practices entities and climate change entities, as the expert annotation is expensive and needs to . This is a first version of the corpus, we expect to have more manual annotations on different types of documents (such as press articles, and social media text) for a second version that will be updated later. 
+
+\subsection{Document selection and preprocessing}
+
+The documents are research article in food science, in relation with climate change, they have been manually selected by experts. They are all in open access.
+
+We then preprocess them by replacing the references by a \texttt{[REF]} tag for single references and \texttt{[MREF]} tag for multi-references (especially because there was some articles with multi-references containing 10+ references, and for easier sentence splitting), and by splitting the documents into sentences.
+
+\subsection{Annotation process}
+
+The annotation has been produced by a single expert annotator (EC) in the microbiology and food safety domain. The software used for the annotation is the brat rapid annotation tool \cite{stenetorpBratWebbasedTool2012}. The annotation is made on some extracts of the documents selected , before the sentence splitting, to give more context to the annotator. These extracts are selected by the expert to reduce the workload and not annotate the whole document. The selection criteria is whether the expert judge that there are interesting and sufficient number of entities. We choose to annotate entities that are nested, as well a discontinuous entities, as some discontinuous entities sometimes had different labels.
+
+The corpus captures two challenging linguistic phenomena: \textbf{nested entities}, where spans of different types overlap \cite{}, and \textbf{discontinuous entities}, where a single logical entity spans non-contiguous text segments \cite{}. Moreover, many entity types are close in meaning — a single span can simultaneously be a valid instance of multiple types (e.g., ``food wastage'' can denote a problem origin, and a waste management practice) — making this a challenging testbed for zero-shot NER.
+
+% guidelines pourraient être mises en annexe
+\subsection{Entities definitions and annotation guidelines}
+
+We define food practices entities by separating them into sub-categories. 
+
+\begin{itemize}
+    \item \textbf{Food repertoire}: Covers practices and factors related to food choices (in terms of quality or quantity) that may or may not be part of an individual's diet (e.g., meat consumption)
+
+    \item \textbf{Logistics and Travel}: Covers pre-purchase practices (checking existing resources, meal planning, etc.) and travel to the place of purchase (using low-carbon transportation)
+
+    \item \textbf{Procurement / Purchasing}: Purchasing practices (self-production, choice of products / retail locations, associated social interactions and human-object interactions, effects of marketing) as well as non-market procurement strategies.
+
+    \item \textbf{Storage}: Practices for storing food after purchase and before preparation (choice of packaging, independent assessment of the best-by date, energy efficiency for preservation...)
+
+    \item \textbf{Food preparation}: All attitudes and practices related to the preparation and cooking of food (e.g., raw foodism, rational use of water, energy conservation, reducing food waste from cooked meals...).
+
+    \item \textbf{Consumption / customs (table manners)}: Consumption practices in the context of eating and meals (e.g., reducing portion sizes, using eco-friendly utensils)
+
+    \item \textbf{Leftovers storage / waste management}: Practices that take place after the meal, with consideration for the end of the food's life cycle (storage duration of leftovers, individual or municipal composting...)
+\end{itemize}
+
+\subsection*{Climate change entities}
+
+\begin{itemize}
+    \item \textbf{Climate Change}:
+\end{itemize}
+
+We also manually selected some entities from the existing Climate-Change-NER corpus \cite{bhattacharjeeINDUSEffectiveEfficient2024}. The discarded entities types were judge non interesting for our use case regarding food practices linked to climate change.
+
+\begin{itemize}
+    \item \textbf{Climate Mitigations}: activities to reduce climate change or to better deal with the consequences
+
+    \item \textbf{Climate Problem Origins}
+\end{itemize}
+
+
+\section{Experimental Setup}
+
+\subsection{Existing Baselines Models}
+
+We select the following baselines methods, an encoder version and an LLM version : 
+\begin{itemize}
+    \item GLiNER \cite{zaratianaGLiNERGeneralistModel2023} : it is an encoder-based approach , where they fine-tuned a BERT model using special \texttt{[ENT]} tokens that precedes entity types names, on a large corpus with more than 13k different entity types automatically annotated using ChatGPT. Then the special tokens and entities are concatenated with the sentence where we want to find entities, and a dot product is computed between input sentence tokens embeddings and the different \texttt{[ENT]} tokens for each entity type. We specifically use \texttt{gliner\_large-v2.5}\footnote{\url{https://huggingface.co/gliner-community/gliner_large-v2.5/tree/main}}. 
+    \item GoLLIE \cite{sainzGoLLIEAnnotationGuidelines2024} : GoLLIE is a decoder-based approach, here they fine tuned different sizes of CodeLLaMA models, transforming annotation guidelines (entity types names, description and examples) in python syntax defining each entity type as a class, the input text is then appended as a python string in the prompt, and the models generates the entity mentions as a structured list format.
+\end{itemize}
+
+
+\subsection{Prompting Baseline}
+
+We also try a custom NER prompt that contains a persona for the system part and the following information in the user part : 
+\begin{enumerate}
+    \item Task instruction : simple sentence describing the NER task
+    \item Entities types names and descriptions, and, depending on what is available, for each entity type : its examples, counter examples
+    \item Rules : Corpus-specific annotation guidelines if available
+    \item Output format : We ask to output in specific format, with an example, and some rules. Here we only tried JSON even if we know the output format can impact performance, as it will stay the same between text-only and image-augmented prompts
+    \item Then finally the input text from which we want to extract entities
+\end{enumerate}
+
+An example of the template is shown in 
+
+% TODO : figure
+
+\section{Results}
+
+We provide the results in the table~\ref{tab:f1-sf4cd-v0.4}
+\begin{table*}[t]
+\caption{F1 scores on sf4cd-v0.4 (Partial, Strict). Best per metric in bold, second-best underlined.}
+\label{tab:f1-sf4cd-v0.4}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l|ccc|ccc|ccc}
+\hline
+\multirow{2}{*}{Experiment} & \multicolumn{3}{|c|}{\textbf{Model}} & \multicolumn{3}{{|c|}}{\textbf{Partial}} & \multicolumn{3}{{|c}}{\textbf{Strict}} \\
+ & name & size & type & P & R & F1 & P & R & F1 \\
+\hline
+\multirow{2}{*}{baselines} & GLiNER & 450M & enc & 17.45 & 39.76 & 24.25 & 7.07 & 16.11 & 9.83 \\
+ & GoLLIE & 34B & llm & \underline{51.27} & 24.25 & 32.92 & 25.16 & 11.90 & 16.16 \\
+\hline
+\multirow{2}{*}{prompting} & Gemma4 & 31B & llm & 48.76 & 38.55 & 43.06 & 28.38 & 22.44 & 25.06 \\
+ & Qwen & 27B & llm & \textbf{66.67} & 0.90 & 1.78 & \textbf{55.56} & 0.75 & 1.49 \\
+\hline
+\multirow{2}{*}{frontier} & Claude Opus 4.8 & - & llm & 49.65 & \underline{42.62} & \underline{45.87} & 28.95 & \underline{24.85} & \underline{26.74} \\
+ & GLM 5.2 & 753B & llm & 46.92 & \textbf{46.99} & \textbf{46.95} & \underline{29.17} & \textbf{29.22} & \textbf{29.19} \\
+\hline
+\end{tabular}
+}
+\end{table*}
+
+\section*{Limitations}
+
+\paragraph{Discontinuous entities} The methods we use do not handle the discontinuous entities.
+
+\paragraph{Annotation and evaluation}
+
+\section*{Acknowledgments}
+
+
+\bibliography{custom}
+
+\appendix
+
+\section{Example Appendix}
+\label{sec:appendix}
+
+This is an appendix.
+
+\end{document}
