@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "FoodClimNER"
+version = "1.0.0"
+description = "experiments for development and baseline evaluation of FoodClimNER corpus"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "jsonlines",
+  "torch>=2.9.1",
+  "torchvision>=0.24.1",
+  "transformers>=5.13.0",
+  "datasets",
+  "pandas",
+  "tqdm",
+  "gliner>=0.2.24",
+  "accelerate>=1.14.0",
+  "flash-linear-attention>=0.4.2",
+  "dotenv>=0.9.9",
+]
+
+[dependency-groups]
+dev = [
+  "Levenshtein",
+  "matplotlib",
+  "nltk",
+  "spacy",
+  "jupyter",
+  "pytest>=8.0",
+  "ruff",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true

@@ -1,0 +1,42 @@
+# python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache
+.ipynb_checkpoints
+.uv-cache
+.stats_cache
+
+
+# Local venv and api keys
+.venv
+.env
+
+# local config
+.vscode
+
+# local dirs with data
+data/*
+models/*/
+out/*
+_archives/*
+tmp/
+
+
+# non needed for reproduction but
+# useful for dev (will be added in another branch)
+scripts/
+src/visualization
+docs/
+
+# ai agents 
+AGENTS.md
+.codegraph
+.opencode
+.agents
+opencode.jsonc
+.codegraph/daemon.pid
+skills-lock.json
