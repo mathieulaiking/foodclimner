@@ -6,9 +6,9 @@
 </p>
 
 <p align="center">
-  🤗 <a href="https://huggingface.co/datasets/inrae-bibliome/foodclimner">Dataset</a> &nbsp;·&nbsp; 📄 <a href="https://arxiv.org/abs/XXXX.XXXXX">Paper</a>
+  🤗 <a href="https://huggingface.co/datasets/inrae-bibliome/foodclimner">Dataset</a> &nbsp;·&nbsp; 
+  📄 <a href="">Paper (coming soon!)</a>
 </p>
-
 
 We present FoodClimNER a new corpus for food entities and climate change entities. Our article was published in "The 3rd Workshop of Natural Language Processing meets Climate Change"
 
