@@ -3,14 +3,22 @@
 Provides the core evaluation API through a set of focused classes:
 loading, format detection, matching, scoring, and output formatting.
 
-For the command-line interface use::
+Run as::
 
-    python -m src.cli.eval_ner
+    python -m src.evaluation.evaluate_ner \\
+        path/to/predictions.jsonl \\
+        path/to/gold.jsonl \\
+        [--mode strict|exact|partial]
+
+    python -m src.evaluation.evaluate_ner -r \\
+        path/to/predictions_dir \\
+        path/to/gold_dir
 """
 
 from __future__ import annotations
 
 import abc
+import argparse
 import csv
 import json
 import logging
@@ -18,9 +26,51 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from src.schemas import EvalCounts, EvalEntity
+from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
+
+
+# ── Evaluation schemas (owned by this module) ───────────────────────
+
+
+@dataclass(frozen=True)
+class EvalEntity:
+    """One entity mention for strict evaluation.
+
+    Contiguous mention: spans has one ``(start, end)`` pair.
+    Discontinuous mention: spans has multiple ``(start, end)`` pairs,
+    all belonging to the same logical entity.
+    """
+
+    type: str
+    spans: tuple[tuple[int, int], ...]
+
+
+@dataclass
+class EvalCounts:
+    """TP/FP/FN counts with computed precision, recall, F1."""
+
+    tp: int = 0
+    fp: int = 0
+    fn: int = 0
+
+    @property
+    def precision(self) -> float:
+        denom = self.tp + self.fp
+        return self.tp / denom if denom else 0.0
+
+    @property
+    def recall(self) -> float:
+        denom = self.tp + self.fn
+        return self.tp / denom if denom else 0.0
+
+    @property
+    def f1(self) -> float:
+        p = self.precision
+        r = self.recall
+        denom = p + r
+        return 2 * p * r / denom if denom else 0.0
 
 
 class MatchMode(abc.ABC):
@@ -519,6 +569,8 @@ class ResultFormatter:
 
 
 __all__ = [
+    "EvalCounts",
+    "EvalEntity",
     "EvalResult",
     "MatchMode", "StrictMatch", "ExactMatch", "PartialMatch",
     "Matcher",
@@ -528,3 +580,172 @@ __all__ = [
     "Evaluator",
     "ResultFormatter",
 ]
+
+
+# ── CLI ───────────────────────────────────────────────────────────────
+
+MODE_CHOICES = ["strict", "exact", "partial"]
+AVG_CHOICES = ["micro", "macro", "both"]
+FMT_CHOICES = ["auto", "multispan", "tokentag"]
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run entity-level NER evaluation with support for nested "
+            "and discontinuous entities."
+        ),
+    )
+    parser.add_argument(
+        "pred",
+        type=Path,
+        help="Path to predictions JSONL (or directory in --recursive mode).",
+    )
+    parser.add_argument(
+        "gold",
+        type=Path,
+        help="Path to gold-standard JSONL (or directory in --recursive mode).",
+    )
+    parser.add_argument(
+        "-r", "--recursive",
+        action="store_true",
+        help="Recursive directory mode.",
+    )
+    parser.add_argument(
+        "-m", "--mode",
+        choices=MODE_CHOICES,
+        default="strict",
+        help="Evaluation mode (default: strict).",
+    )
+    parser.add_argument(
+        "-a", "--average",
+        choices=AVG_CHOICES,
+        default="both",
+        help="Averaging method (default: both).",
+    )
+    parser.add_argument(
+        "-f", "--input-format",
+        choices=FMT_CHOICES,
+        default="auto",
+        help="Input format for predictions file (default: auto).",
+    )
+    args = parser.parse_args()
+
+    # Argument validation
+    if args.recursive:
+        if not args.pred.is_dir():
+            raise NotADirectoryError(
+                f"Prediction path must be a directory in recursive mode: {args.pred}"
+            )
+        if not args.gold.is_dir():
+            raise NotADirectoryError(
+                f"Gold path must be a directory in recursive mode: {args.gold}"
+            )
+    else:
+        if not args.pred.is_file():
+            raise FileNotFoundError(f"Predictions file not found: {args.pred}")
+        if not args.gold.is_file():
+            raise FileNotFoundError(f"Gold file not found: {args.gold}")
+
+    return args
+
+
+def main() -> None:
+    """Run entity-level NER evaluation from CLI arguments."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(message)s",
+    )
+    args = parse_args()
+
+    if args.recursive:
+        _run_recursive(args)
+    else:
+        _run_single(args)
+
+
+def _run_single(args: argparse.Namespace) -> None:
+    """Run evaluation on a single prediction/gold file pair."""
+    result = Evaluator.run_pair(
+        args.pred,
+        args.gold,
+        mode=args.mode,
+        average=args.average,
+        input_format=args.input_format,
+    )
+    if result is None:
+        raise RuntimeError(f"Evaluation failed for {args.pred}")
+
+    ResultFormatter.print_result(result)
+    out_path = args.pred.parent / "results.csv"
+    print(f"\nResults saved to {out_path}")
+
+
+def _run_recursive(args: argparse.Namespace) -> None:
+    """Discover dataset directories and evaluate each one.
+
+    ``pred`` is a directory tree containing ``<dataset>/predictions.jsonl``.
+    ``gold`` is a directory tree containing ``<dataset>/test.jsonl`` (and
+    ``entities.json``).
+    """
+    # Discover all dataset directories by their predictions.jsonl files
+    pred_files = sorted(args.pred.rglob("**/predictions.jsonl"))
+    if not pred_files:
+        LOGGER.warning("No predictions.jsonl files found under %s", args.pred)
+        return
+
+    pairs: list[tuple[Path, Path, str]] = []
+    for pf in pred_files:
+        dataset_name = pf.parent.name
+        gold_test = args.gold / dataset_name / "test.jsonl"
+        if not gold_test.is_file():
+            LOGGER.warning(
+                "Skipping %s: gold file not found at %s", dataset_name, gold_test
+            )
+            continue
+        pairs.append((pf, gold_test, dataset_name))
+
+    if not pairs:
+        LOGGER.warning("No valid prediction/gold pairs found.")
+        return
+
+    succeeded = 0
+    skipped = 0
+    failed = 0
+
+    tqdm_bar = tqdm(pairs, desc="Evaluating", unit="dataset")
+    for pred_path, gold_path, dataset_name in tqdm_bar:
+        out_csv = pred_path.parent / "results.csv"
+        if out_csv.is_file():
+            skipped += 1
+            tqdm_bar.set_description(f"Evaluating (skipped: {skipped})")
+            continue
+
+        result = Evaluator.run_pair(
+            pred_path,
+            gold_path,
+            mode=args.mode,
+            average=args.average,
+            input_format=args.input_format,
+            quiet=True,
+        )
+        if result is None:
+            failed += 1
+        else:
+            succeeded += 1
+
+    tqdm_bar.close()
+
+    parts: list[str] = []
+    if succeeded:
+        parts.append(f"{succeeded} succeeded")
+    if skipped:
+        parts.append(f"{skipped} skipped")
+    if failed:
+        parts.append(f"{failed} failed")
+    print(f"Done: {', '.join(parts)}")
+
+
+if __name__ == "__main__":
+    main()

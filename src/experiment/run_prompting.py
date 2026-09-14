@@ -32,18 +32,16 @@ if __package__ is None or __package__ == "":
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
-from src.schemas import (
+from src.data_processing.loader import DatasetLoader, EntityInfo, RuleSection
+from src.experiment.model_parsing import JSONMultiEntParser
+from src.experiment.output_writer import OutputWriter
+from src.experiment.prompts import (
     EntitiesSection,
-    EntityInfo,
     InputSection,
     NERPrompt,
     NERUserPrompt,
-    RuleSection,
     StandardJsonOutputFormat,
 )
-from src.dataset_loader import DatasetLoader
-from src.output_writer import OutputWriter
-from src.parse import JSONMultiEntParser
 
 DEFAULT_INSTRUCTION = "Extract all mentions of the declared entities types from the input text in the specified format."
 DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant specialized in named entity recognition."

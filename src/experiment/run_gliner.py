@@ -31,9 +31,9 @@ if __package__ is None or __package__ == "":
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
-from src.dataset_loader import DatasetLoader
-from src.output_writer import JsonSink, OutputWriter
-from src.parse import GlinerParser
+from src.data_processing.loader import DatasetLoader
+from src.experiment.model_parsing import GlinerParser
+from src.experiment.output_writer import JsonSink, OutputWriter
 
 
 def parse_args() -> Namespace:

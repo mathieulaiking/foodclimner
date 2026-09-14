@@ -1,5 +1,5 @@
 """Corpus format conversion: readers and writers for BRAT, CoNLL, JSONL-BIO,
-and JSONL-TXT-MultiSpan formats.
+and JSONL-TXT-MultiSpan formats, plus CLI.
 
 All readers produce ``list[MultiSpanNERDocument]``.
 All writers consume ``list[MultiSpanNERDocument]`` and produce files
@@ -7,29 +7,26 @@ in the target format inside the given output directory.
 
 Usage::
 
-    from src.convert import convert, auto_detect_format, Normalizer
-
-    normalizer = Normalizer()
-    fmt = auto_detect_format("/path/to/input")
-    convert("/path/to/input", "/path/to/output", target_format="jsonl_txtmultispan",
-            normalizer=normalizer)
+    python -m src.data_processing.convert data/brat-annots data/sf4cd \\
+        --format jsonl_txtmultispan
 """
 
 from __future__ import annotations
 
 import abc
+import argparse
 import json
 import re
 from pathlib import Path
 from typing import Any
-from src.brat_utils import parse_ann_entities
-from src.schemas import (
+
+from src.data_processing.brat import parse_ann_entities
+from src.data_processing.loader import (
     EntityInfo,
     MultiSpanEntity,
     MultiSpanNERDocument,
     RuleSection,
 )
-from src.utils import normalize_example_id
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -164,7 +161,7 @@ class Normalizer:
     @staticmethod
     def normalize_id(doc_id: Any) -> str:
         """Normalize a document identifier to a stable string."""
-        return normalize_example_id(doc_id)
+        return str(doc_id)
 
 
 # ── Abstract base ────────────────────────────────────────────────────
@@ -714,3 +711,92 @@ def convert(
         f"Converted {len(docs)} document(s) from {source_format} "
         f"to {target_format} in {dst}"
     )
+
+
+__all__ = [
+    "FORMAT_CHOICES",
+    "BratHandler",
+    "ConllHandler",
+    "FormatHandler",
+    "JsonlBioHandler",
+    "JsonlTxtMultiSpanHandler",
+    "Normalizer",
+    "auto_detect_format",
+    "convert",
+    "get_handler",
+    "parse_args",
+    "main",
+]
+
+
+# ── CLI ───────────────────────────────────────────────────────────────
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Convert a corpus directory between NER annotation formats. "
+            "The input format is auto-detected."
+        ),
+    )
+    parser.add_argument(
+        "input_dir",
+        type=Path,
+        help="Path to the input directory (format auto-detected).",
+    )
+    parser.add_argument(
+        "output_dir",
+        type=Path,
+        help=(
+            "Path to the output directory. Must not exist or must be empty."
+        ),
+    )
+    parser.add_argument(
+        "-f",
+        "--format",
+        default="jsonl_txtmultispan",
+        choices=FORMAT_CHOICES,
+        help="Target format (default: jsonl_txtmultispan).",
+    )
+    parser.add_argument(
+        "--no-ent-file",
+        action="store_true",
+        default=False,
+        help="Skip creation of entities.json.",
+    )
+    parser.add_argument(
+        "--no-rule-file",
+        action="store_true",
+        default=False,
+        help="Skip creation of rules.json.",
+    )
+    return parser.parse_args(argv)
+
+
+def main() -> None:
+    args = parse_args()
+
+    if not args.input_dir.is_dir():
+        raise NotADirectoryError(
+            f"Input directory does not exist: {args.input_dir}"
+        )
+
+    source_format = auto_detect_format(args.input_dir)
+
+    if args.format == source_format:
+        print(
+            f"Warning: input and target format are both {source_format!r}. "
+            "No conversion is necessary."
+        )
+
+    convert(
+        input_dir=args.input_dir,
+        output_dir=args.output_dir,
+        target_format=args.format,
+        no_ent_file=args.no_ent_file,
+        no_rule_file=args.no_rule_file,
+    )
+
+
+if __name__ == "__main__":
+    main()

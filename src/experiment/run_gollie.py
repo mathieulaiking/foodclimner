@@ -33,10 +33,9 @@ if __package__ is None or __package__ == "":
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
-from src.dataset_loader import DatasetLoader
-from src.output_writer import OutputWriter
-from src.parse import GollieParser
-from src.schemas import EntityInfo
+from src.data_processing.loader import DatasetLoader, EntityInfo
+from src.experiment.model_parsing import GollieParser
+from src.experiment.output_writer import OutputWriter
 
 
 def parse_args() -> Namespace:

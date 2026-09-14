@@ -1,8 +1,10 @@
 """Loading of standard NER dataset directories.
 
-Provides the ``DatasetLoader`` class which reads ``test.jsonl``,
+Provides the NER document schemas (``MultiSpanNERDocument``,
+``TokenTagNERDocument``, ``NERCorpus``, ``EntityInfo``, ``RuleSection``)
+and the ``DatasetLoader`` class which reads ``test.jsonl``,
 ``entities.json``, and the optional ``rules.json`` from a dataset
-directory and returns the corresponding schemas.
+directory.
 
 See AGENTS.md for the full dataset format specification.
 """
@@ -10,9 +12,140 @@ See AGENTS.md for the full dataset format specification.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
-from src.schemas import EntityInfo, MultiSpanEntity, MultiSpanNERDocument, NERCorpus, RuleSection
+
+# ── NER Document schemas ────────────────────────────────────────────
+
+
+@dataclass
+class TokenTagNERDocument:
+    """Token-tagged NER document with BIO labels."""
+
+    id: str | int
+    tokens: list[str]
+    labels: list[str]
+
+
+@dataclass
+class MultiSpanEntity:
+    """One NER entity mention with character-offset spans.
+
+    ``type`` is the canonical entity name.
+    ``text`` is the surface string as it appears in the document.
+    ``spans`` is a list of ``(start, end)`` character-offset pairs,
+    which supports both nested entities (different types overlapping)
+    and discontinuous entities (multiple span tuples for one entity).
+    """
+
+    type: str
+    text: str
+    spans: list[tuple[int, int]]
+
+
+@dataclass
+class MultiSpanNERDocument:
+    """Document-level NER annotations with multi-span entities.
+
+    ``entities`` is a list of ``MultiSpanEntity`` objects, each carrying
+    the canonical type, surface text, and character-offset spans.
+    """
+
+    id: str
+    text: str
+    entities: list[MultiSpanEntity]
+
+
+# ── Dataset / data-loading schemas ──────────────────────────────────
+
+
+@dataclass
+class NERCorpus:
+    """Loaded dataset contents.
+
+    Attributes
+    ----------
+    documents:
+        List of NER-annotated documents.
+    entities_info:
+        List of entity type definitions.
+    """
+
+    documents: list[TokenTagNERDocument | MultiSpanNERDocument] = field(default_factory=list)
+    entities_info: list[EntityInfo] = field(default_factory=list)
+
+    @property
+    def entity_names(self) -> list[str]:
+        """Return the canonical name of each entity type definition."""
+        return [e.type for e in self.entities_info]
+
+
+@dataclass
+class RuleSection:
+    """One rule group with a title, list of rules, and examples."""
+
+    title: str
+    rules: list[str] = field(default_factory=list)
+    examples: list[str] = field(default_factory=list)
+
+    def to_markdown(self) -> str:
+        """Render this rule section as markdown."""
+        parts = [f"### {self.title}", ""]
+        for rule in self.rules:
+            parts.append(f"- {rule}")
+        if self.examples:
+            parts.append("")
+            parts.append(f"**Examples:** {', '.join(self.examples)}")
+        return "\n".join(parts)
+
+
+@dataclass
+class EntityInfo:
+    """One entity type definition with optional documentation.
+
+    Attributes
+    ----------
+    type:
+        Canonical entity type name (required).
+    definition:
+        Optional human-readable definition of the entity.
+    examples:
+        Optional list of example mentions.
+    counter_examples:
+        Optional list of counter-example strings that look similar
+        but should **not** be annotated with this type.
+    """
+
+    type: str
+    definition: Optional[str] = None
+    examples: Optional[list[str]] = None
+    counter_examples: Optional[list[str]] = None
+
+    def to_markdown(self) -> str:
+        """Render this entity info as a markdown bullet list item."""
+        lines = [f"* {self.type}"]
+        if self.definition:
+            lines.append(f"  - Definition: {self.definition}")
+        if self.examples:
+            examples_str = ", ".join(self.examples)
+            lines.append(f"  - Examples: {examples_str}")
+        if self.counter_examples:
+            counter_str = ", ".join(self.counter_examples)
+            lines.append(f"  - Counter-examples: {counter_str}")
+        return "\n".join(lines)
+
+
+__all__ = [
+    "EntityInfo",
+    "MultiSpanEntity",
+    "MultiSpanNERDocument",
+    "NERCorpus",
+    "RuleSection",
+    "TokenTagNERDocument",
+    "DatasetLoader",
+]
 
 
 class DatasetLoader:

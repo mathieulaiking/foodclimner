@@ -5,12 +5,26 @@ from __future__ import annotations
 import abc
 import ast
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any, Callable
 
-from src.schemas import EvalEntity, MultiSpanEntity
-from src.utils import normalize_example_id, strip_extension
+from src.data_processing.loader import MultiSpanEntity
+from src.evaluation import EvalEntity
+
+
+def _normalize_example_id(example_id: Any) -> str:
+    """Return a stable string identifier for one example."""
+    return str(example_id)
+
+
+def _strip_extension(filename: str) -> str:
+    """Return filename stem by removing one extension level."""
+    stem, ext = os.path.splitext(str(filename))
+    if ext:
+        return stem
+    return str(filename)
 
 
 class BaseParser(abc.ABC):
@@ -180,7 +194,7 @@ class BaseParser(abc.ABC):
         reference_by_id: dict[str, dict[str, Any]] = {}
         reference_order: list[str] = []
         for record in reference_records:
-            example_id = normalize_example_id(record["id"])
+            example_id = _normalize_example_id(record["id"])
             if example_id in reference_by_id:
                 raise ValueError(
                     "Reference JSONL contains duplicate example id: "
@@ -196,7 +210,7 @@ class BaseParser(abc.ABC):
             if file_path.suffix.lower() != expected_suffix:
                 continue
 
-            example_id = normalize_example_id(strip_extension(file_path.name))
+            example_id = _normalize_example_id(_strip_extension(file_path.name))
             if example_id in output_files_by_id:
                 raise ValueError(
                     "Duplicate output files for example id "
