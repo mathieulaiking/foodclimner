@@ -10,73 +10,29 @@
   📄 <a href="">Paper (coming soon!)</a>
 </p>
 
-We present FoodClimNER a new corpus for food entities and climate change entities. Our article was published in "The 3rd Workshop of Natural Language Processing meets Climate Change"
+We present FoodClimNER a new corpus for food entities and climate change entities. Our article was published in "The 3rd Workshop of Natural Language Processing meets Climate Change" at EMNLP 2026.
 
 ## Installation
+
+Requires Python ≥ 3.12 and [uv](https://docs.astral.sh/uv/). We tested the code with python 3.14
 
 ```bash
 uv sync
 source .venv/bin/activate
 ```
 
-Requires Python ≥ 3.12 and [uv](https://docs.astral.sh/uv/). We tested the code with python 3.14
+## 1. Corpus and guidelines
 
-## 1. Data processing
-
-Reproduces the dataset from the raw BRAT annotations (downloadable from our dataset repo, e.g. `data/foodclimner-brat`) to the standard NER directory used by all experiments:
+Download the dataset using uv and HF CLI
 
 ```
-data/foodclimner-v1/
-├── test.jsonl      # one {"id", "text", "entities": [{"type", "text", "offsets"}]} per line
-├── entities.json   # entity type definitions
-└── rules.json      # annotation rules (optional)
+mkdir -p data/foodclimner
+uvx hf download --type dataset inrae-bibliome/foodclimner --local_dir data/foodclimner
 ```
 
-### 1.1 Preprocess BRAT annotations
+Guidelines are available [here](guidelines.pdf).
 
-Combine extracts, clean reference/citation patterns, and split into sentences:
-
-```bash
-python -m src.data_processing.brat \
-    --source data/foodclimner-brat \
-    --target data/foodclimner-brat-preprocessed
-```
-
-| Flag | Default | Description |
-|---|---|---|
-| `--source` | required | Directory with BRAT `.txt`/`.ann` pairs |
-| `--target` | `<source>-preprocessed` | Output directory |
-| `--skip-combine` / `--skip-clean` / `--skip-split` | False | Skip one pipeline step |
-| `--lang` | `en` | spaCy sentencizer language |
-| `--no-verify` | False | Skip offset verification |
-| `--debug` | False | Run on 10 docs only |
-
-### 1.2 Convert to the standard format
-
-Auto-detects the input format and writes the target format:
-
-```bash
-python -m src.data_processing.convert \
-    data/foodclimner-brat-preprocessed \
-    data/foodclimner-v1 \
-    --format jsonl_txtmultispan
-```
-
-| Flag | Default | Description |
-|---|---|---|
-| `-f`, `--format` | `jsonl_txtmultispan` | Target format: `brat`, `conll`, `jsonl_bio`, `jsonl_txtmultispan` |
-| `--no-ent-file` | False | Skip `entities.json` |
-| `--no-rule-file` | False | Skip `rules.json` |
-
-### 1.3 (Optional) Simplify entity types
-
-Collapse the fine-grained types to `food_practice` / `climate_change`:
-
-```bash
-python -m src.data_processing.simplify_types \
-    --data-dir data/foodclimner-v1 \
-    --output-dir data/foodclimner-v1-simple
-```
+We also provide scripts to reproduce the preprocessing and conversion of raw brat annotation in [`src/data_processing`](src/data_processing/). `brat.py` for preprocessing the files, `convert.py` for converting brat to the test.jsonl file. We also have the `simplify_types.py` script for our experiments with only the macro types of entities, that maps the detailed types to the macro ones.
 
 ## 2. Experiments
 
@@ -86,9 +42,9 @@ Encoder-based NER supporting flat and nested modes.
 
 ```bash
 python -m src.experiment.run_gliner \
-    --model_name urchade/gliner_small-v2.1 \
-    --data_dir data/foodclimner-v1 \
-    --output_dir out/gliner_small \
+    --model_name urchade/gliner_large-v2.5 \
+    --data_dir data/foodclimner \
+    --output_dir out/gliner_large \
     --threshold 0.5 \
     --flat_ner
 ```
@@ -109,7 +65,7 @@ Instruction-tuned LLM with code-like entity guidelines.
 ```bash
 python -m src.experiment.run_gollie \
     --model_name HiTZ/GoLLIE-7B \
-    --data_dir data/foodclimner-v1 \
+    --data_dir data/foodclimner \
     --output_dir out/gollie_7b \
     --max_new_tokens 512
 ```
@@ -129,9 +85,9 @@ Structured markdown prompting with system instruction, entity definitions, and o
 
 ```bash
 python -m src.experiment.run_prompting \
-    --model_name mistralai/Mistral-7B-Instruct-v0.3 \
-    --data_dir data/foodclimner-v1 \
-    --output_dir out/mistral7b_prompt \
+    --model_name google/gemma-4-31B-it \
+    --data_dir data/foodclimner \
+    --output_dir out/gemma4-31b \
     --max_new_tokens 4096
 ```
 
@@ -150,9 +106,9 @@ Same prompting approach via the OpenRouter API:
 
 ```bash
 python -m src.experiment.run_prompting_api \
-    --model openai/gpt-4o \
-    --data_dir data/foodclimner-v1 \
-    --output_dir out/gpt4o_prompt \
+    --model openai/gpt-5.6-sol \
+    --data_dir data/foodclimner \
+    --output_dir out/gpt-5.6-sol \
     --max_tokens 4096
 ```
 
@@ -185,7 +141,7 @@ Entity-level evaluation with support for nested and discontinuous entities.
 ```bash
 python -m src.evaluation.evaluate_ner \
     out/experiment/predictions.jsonl \
-    data/foodclimner-v1/test.jsonl \
+    data/foodclimner/test.jsonl \
     --mode strict \
     --average both
 ```
